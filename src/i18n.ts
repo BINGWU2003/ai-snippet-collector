@@ -17,6 +17,8 @@ export interface Messages {
   // snippetCodeLens
   deleteSnippet: string;
   gotoSource: string;
+  expandReference: string;
+  collapseReference: string;
   // extension (QuickPick / InputBox)
   quickPickPlaceholder: string;
   quickPickCreateNew: string;
@@ -37,6 +39,8 @@ const en: Messages = {
   failedToSave: (m) => `Failed to save snippet: ${m}`,
   deleteSnippet: "$(trash) Delete snippet",
   gotoSource: "$(go-to-file) Go to source",
+  expandReference: "$(expand-all) Expand code",
+  collapseReference: "$(collapse-all) Collapse code",
   statusBarNone: "$(file-add) → none",
   statusBarTooltipNone: "Add snippet to last used file (none yet)",
   statusBarTooltip: (f) => `Add snippet to: ${f}`,
@@ -59,6 +63,8 @@ const zhCn: Messages = {
   failedToSave: (m) => `保存代码片段失败：${m}`,
   deleteSnippet: "$(trash) 删除此片段",
   gotoSource: "$(go-to-file) 跳转到源码",
+  expandReference: "$(expand-all) 展开代码",
+  collapseReference: "$(collapse-all) 折叠代码",
   statusBarNone: "$(file-add) → 无",
   statusBarTooltipNone: "添加代码片段到上次使用的文件（尚未选择）",
   statusBarTooltip: (f) => `添加代码片段到：${f}`,

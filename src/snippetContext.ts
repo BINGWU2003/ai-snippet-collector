@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { formatAsReference } from "./formatter";
 import { t } from "./i18n";
 
 export interface SnippetContext {
@@ -6,11 +7,10 @@ export interface SnippetContext {
   workspaceFolder: string;
 }
 
-import { formatForAI } from "./formatter";
-
 /**
  * 获取当前编辑器中的代码片段上下文。
  * 若未选中文字，询问用户是否使用当前行。
+ * 输出为「代码引用」格式，不内嵌代码内容。
  */
 export async function getSnippetContext(): Promise<SnippetContext | null> {
   const editor = vscode.window.activeTextEditor;
@@ -34,7 +34,7 @@ export async function getSnippetContext(): Promise<SnippetContext | null> {
     const line = selection.active.line;
     const lineText = editor.document.lineAt(line).text;
     selection = new vscode.Selection(line, 0, line, lineText.length);
-    editor.selection = selection; // 可视反馈：高亮当前行
+    editor.selection = selection;
     code = editor.document.getText(selection);
   }
 
@@ -49,15 +49,9 @@ export async function getSnippetContext(): Promise<SnippetContext | null> {
   const relativeFilePath = vscode.workspace.asRelativePath(editor.document.uri);
   const startLine = selection.start.line + 1;
   const endLine = selection.end.line + 1;
-  const language = editor.document.languageId;
 
-  const textToAppend = formatForAI(
-    relativeFilePath,
-    startLine,
-    endLine,
-    code,
-    language,
-  );
+  // 仅保存引用，不内嵌代码
+  const textToAppend = formatAsReference(relativeFilePath, startLine, endLine);
 
   return { textToAppend, workspaceFolder };
 }

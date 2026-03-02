@@ -8,6 +8,7 @@ import { t } from "./i18n";
 /**
  * 将代码片段追加到目标文件，并在成功后提供"打开文件"操作。
  */
+
 export async function saveSnippet(
   context: vscode.ExtensionContext,
   targetFileName: string,

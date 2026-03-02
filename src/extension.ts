@@ -5,6 +5,7 @@ import { saveSnippet, listPromptFiles } from "./fileManager";
 import { getSnippetContext } from "./snippetContext";
 import { SnippetCodeLensProvider } from "./snippetCodeLens";
 import { t } from "./i18n";
+import { formatCodeBlock } from "./formatter";
 
 export function activate(context: vscode.ExtensionContext) {
   // 初始化状态栏
@@ -90,6 +91,79 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(disposableDelete, disposableGoto);
+
+  // ── 命令：展开代码引用 → 将引用替换为当前实际代码块 ──────────
+  const disposableExpand = vscode.commands.registerCommand(
+    "ai-snippet.expandReference",
+    async (
+      docUri: vscode.Uri,
+      sepLineNum: number,
+      relativePath: string,
+      startLine: number,
+      endLine: number,
+    ) => {
+      // 查找源文件
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders) {
+        vscode.window.showErrorMessage(t().noWorkspaceFolder);
+        return;
+      }
+      let sourceUri: vscode.Uri | undefined;
+      for (const folder of workspaceFolders) {
+        const candidate = vscode.Uri.joinPath(folder.uri, relativePath);
+        try {
+          await vscode.workspace.fs.stat(candidate);
+          sourceUri = candidate;
+          break;
+        } catch {
+          /* 继续查找 */
+        }
+      }
+      if (!sourceUri) {
+        vscode.window.showErrorMessage(
+          `Source file not found: ${relativePath}`,
+        );
+        return;
+      }
+
+      // 读取源文件当前指定行的代码
+      const sourceDoc = await vscode.workspace.openTextDocument(sourceUri);
+      const startIdx = Math.max(0, startLine - 1);
+      const endIdx = Math.min(sourceDoc.lineCount - 1, endLine - 1);
+      const lines: string[] = [];
+      for (let ln = startIdx; ln <= endIdx; ln++) {
+        lines.push(sourceDoc.lineAt(ln).text);
+      }
+      const code = lines.join("\n");
+      const language = sourceDoc.languageId;
+
+      // 构造内嵌代码块
+      const codeBlock = `\`\`\`${language}\n${code}\n\`\`\``;
+
+      // 在 prompts 文件中，将引用行（**File:**）后插入代码块
+      const promptDoc = await vscode.workspace.openTextDocument(docUri);
+      const editor = await vscode.window.showTextDocument(promptDoc);
+      const refLine = sepLineNum + 1; // **File:** 所在行
+      const insertPos = new vscode.Position(refLine + 1, 0);
+      await editor.edit((eb) => {
+        eb.insert(insertPos, codeBlock + "\n");
+      });
+    },
+  );
+  context.subscriptions.push(disposableExpand);
+
+  // ── 命令：折叠代码块 → 恢复为仅引用格式 ─────────────────────────
+  const disposableCollapse = vscode.commands.registerCommand(
+    "ai-snippet.collapseReference",
+    async (docUri: vscode.Uri, codeBlockRange: vscode.Range) => {
+      const doc = await vscode.workspace.openTextDocument(docUri);
+      const editor = await vscode.window.showTextDocument(doc);
+      await editor.edit((eb) => {
+        eb.delete(codeBlockRange);
+      });
+    },
+  );
+  context.subscriptions.push(disposableCollapse);
 
   // ── 命令 1：添加到指定文件（支持 QuickPick 直接输入新文件名）──
   const disposableSpecific = vscode.commands.registerCommand(
