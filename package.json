@@ -1,8 +1,19 @@
 {
   "name": "ai-snippet-collector",
-  "displayName": "ai-snippet-collector",
-  "description": "",
+  "displayName": "AI Snippet Collector",
+  "description": "Collect and organize code snippets into Markdown prompt files for AI assistants.",
   "version": "0.0.1",
+  "license": "MIT",
+  "publisher": "BINGWU2003",
+  "author": {
+    "name": "BINGWU2003",
+    "email": "hujiacheng2003@163.com"
+  },
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BINGWU2003/ai-snippet-collector"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -78,7 +89,7 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test",
-    "vsix": "pnpm run package && vsce package"
+    "vsix": "pnpm run package && vsce package --allow-missing-repository"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
