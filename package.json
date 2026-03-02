@@ -2,7 +2,7 @@
   "name": "ai-snippet-collector",
   "displayName": "AI Snippet Collector",
   "description": "Collect and organize code snippets into Markdown prompt files for AI assistants.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "MIT",
   "publisher": "BINGWU2003",
   "author": {
@@ -24,6 +24,9 @@
     "onLanguage:markdown"
   ],
   "main": "./dist/extension.js",
+  "bin": {
+    "compile-prompt": "./dist/cli/compile-prompt.js"
+  },
   "contributes": {
     "commands": [
       {
@@ -112,6 +115,10 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "vsix": "pnpm run package && vsce package --allow-missing-repository",
+    "build:cli": "node esbuild.cli.js",
+    "build:cli:prod": "node esbuild.cli.js --production",
+    "link:cli": "pnpm run build:cli:prod && npm link",
+    "unlink:cli": "npm unlink -g ai-snippet-collector",
     "compile-prompt": "tsx scripts/compile-prompt.ts"
   },
   "devDependencies": {
