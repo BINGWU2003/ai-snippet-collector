@@ -1,6 +1,8 @@
 {
   "command.addToSpecificFile.title": "AI Snippet: 添加到指定提示词文件…",
   "command.addToLastFile.title": "AI Snippet: 添加到上次使用的提示词文件",
+  "command.deleteSnippet.title": "AI Snippet: 删除代码片段",
+  "command.gotoSnippetSource.title": "AI Snippet: 跳转到源码",
   "configuration.title": "AI Snippet Collector",
   "configuration.language.enum.auto": "跟随 VS Code 界面语言自动选择",
   "configuration.language.enum.en": "English",

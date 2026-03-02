@@ -1,6 +1,8 @@
 {
   "command.addToSpecificFile.title": "AI Snippet: Add to specific prompt file...",
   "command.addToLastFile.title": "AI Snippet: Add to last used prompt file",
+  "command.deleteSnippet.title": "AI Snippet: Delete snippet",
+  "command.gotoSnippetSource.title": "AI Snippet: Go to source",
   "configuration.title": "AI Snippet Collector",
   "configuration.language.enum.auto": "Follow VS Code display language automatically",
   "configuration.language.enum.en": "English",

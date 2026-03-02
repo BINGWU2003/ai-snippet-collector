@@ -3,6 +3,7 @@ import { LAST_FILE_KEY } from "./constants";
 import { initStatusBar, updateStatusBar } from "./statusBar";
 import { saveSnippet, listPromptFiles } from "./fileManager";
 import { getSnippetContext } from "./snippetContext";
+import { SnippetCodeLensProvider } from "./snippetCodeLens";
 import { t } from "./i18n";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -20,6 +21,75 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
   );
+
+  // ── CodeLens：每个片段顶部显示删除按钮 ──────────────────────────
+  const codeLensProvider = new SnippetCodeLensProvider();
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider(
+      [
+        { language: "markdown", pattern: "**/prompts/**" },
+        { pattern: "**/prompts/**/*.txt" },
+      ],
+      codeLensProvider,
+    ),
+  );
+
+  // ── 命令：删除指定片段 ────────────────────────────────────────
+  const disposableDelete = vscode.commands.registerCommand(
+    "ai-snippet.deleteSnippet",
+    async (uri: vscode.Uri, range: vscode.Range) => {
+      const document = await vscode.workspace.openTextDocument(uri);
+      const editor = await vscode.window.showTextDocument(document);
+      await editor.edit((editBuilder) => {
+        editBuilder.delete(range);
+      });
+    },
+  );
+
+  // ── 命令：跳转到源文件指定行 ──────────────────────────────────
+  const disposableGoto = vscode.commands.registerCommand(
+    "ai-snippet.gotoSnippetSource",
+    async (relativePath: string, lineNumber: number) => {
+      // 在所有工作区文件夹中查找匹配的文件
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders) {
+        vscode.window.showErrorMessage(t().noWorkspaceFolder);
+        return;
+      }
+
+      let targetUri: vscode.Uri | undefined;
+      for (const folder of workspaceFolders) {
+        const candidate = vscode.Uri.joinPath(folder.uri, relativePath);
+        try {
+          await vscode.workspace.fs.stat(candidate);
+          targetUri = candidate;
+          break;
+        } catch {
+          // 文件不在此工作区，继续找
+        }
+      }
+
+      if (!targetUri) {
+        vscode.window.showErrorMessage(
+          `Source file not found: ${relativePath}`,
+        );
+        return;
+      }
+
+      const doc = await vscode.workspace.openTextDocument(targetUri);
+      const editor = await vscode.window.showTextDocument(doc);
+      // lineNumber 是 1-indexed，VS Code Position 是 0-indexed
+      const targetLine = Math.max(0, lineNumber - 1);
+      const position = new vscode.Position(targetLine, 0);
+      editor.selection = new vscode.Selection(position, position);
+      editor.revealRange(
+        new vscode.Range(position, position),
+        vscode.TextEditorRevealType.InCenter,
+      );
+    },
+  );
+
+  context.subscriptions.push(disposableDelete, disposableGoto);
 
   // ── 命令 1：添加到指定文件（支持 QuickPick 直接输入新文件名）──
   const disposableSpecific = vscode.commands.registerCommand(

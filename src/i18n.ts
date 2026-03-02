@@ -14,6 +14,9 @@ export interface Messages {
   statusBarNone: string;
   statusBarTooltipNone: string;
   statusBarTooltip: (fileName: string) => string;
+  // snippetCodeLens
+  deleteSnippet: string;
+  gotoSource: string;
   // extension (QuickPick / InputBox)
   quickPickPlaceholder: string;
   quickPickCreateNew: string;
@@ -32,6 +35,8 @@ const en: Messages = {
   snippetSaved: (f) => `Snippet saved to /prompts/${f}`,
   openFile: "Open File",
   failedToSave: (m) => `Failed to save snippet: ${m}`,
+  deleteSnippet: "$(trash) Delete snippet",
+  gotoSource: "$(go-to-file) Go to source",
   statusBarNone: "$(file-add) → none",
   statusBarTooltipNone: "Add snippet to last used file (none yet)",
   statusBarTooltip: (f) => `Add snippet to: ${f}`,
@@ -52,6 +57,8 @@ const zhCn: Messages = {
   snippetSaved: (f) => `代码片段已保存至 /prompts/${f}`,
   openFile: "打开文件",
   failedToSave: (m) => `保存代码片段失败：${m}`,
+  deleteSnippet: "$(trash) 删除此片段",
+  gotoSource: "$(go-to-file) 跳转到源码",
   statusBarNone: "$(file-add) → 无",
   statusBarTooltipNone: "添加代码片段到上次使用的文件（尚未选择）",
   statusBarTooltip: (f) => `添加代码片段到：${f}`,

@@ -9,7 +9,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -20,6 +22,14 @@
       {
         "command": "ai-snippet.addToLastFile",
         "title": "%command.addToLastFile.title%"
+      },
+      {
+        "command": "ai-snippet.deleteSnippet",
+        "title": "%command.deleteSnippet.title%"
+      },
+      {
+        "command": "ai-snippet.gotoSnippetSource",
+        "title": "%command.gotoSnippetSource.title%"
       }
     ],
     "configuration": {
