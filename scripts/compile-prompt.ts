@@ -22,22 +22,59 @@ const arg = process.argv[2];
 if (!arg || arg === "--help" || arg === "-h") {
   console.log(
     `
-用法：${cliName} <prompt文件路径>
+用法：${cliName} <prompt文件路径> | --clear <路径>
 
 示例：
-  ${cliName} prompts/current.md              # 输出到 stdout
+  ${cliName} prompts/current.md              # 展开引用，输出到 stdout
   ${cliName} prompts/current.md | clip       # 复制到剪贴板 (Windows)
-  ${cliName} prompts/current.md | pbcopy     # 复制到剪贴板 (macOS)
   ${cliName} prompts/current.md | claude     # 直接发给 Claude CLI
+  ${cliName} --clear prompts                 # 删除文件夹下的所有文件
+  ${cliName} --clear prompts/current.md      # 删除单个文件
 
 说明：
-  将 prompts 文件中的 **File:** 代码引用实时展开为当前磁盘上的最新代码。
+  如果传入文件路径，会将 prompts 文件中的 **File:** 代码引用实时展开为当前磁盘上的最新代码。
   如果引用已经展开（含代码块），将用最新代码替换旧代码块。
 `.trim(),
   );
   process.exit(arg ? 0 : 1);
 }
 
+// ── 清理命令 (--clear / -c) ───────────────────────────────────────────────────
+if (arg === "--clear" || arg === "-c") {
+  const targetArg = process.argv[3];
+  if (!targetArg) {
+    console.error(
+      `❌ 清理失败：未提供目标路径！\n示例：${cliName} --clear prompts`,
+    );
+    process.exit(1);
+  }
+
+  const absTarget = path.resolve(process.cwd(), targetArg);
+  if (!fs.existsSync(absTarget)) {
+    console.log(`✅ [已跳过] 目标不存在：${targetArg}`);
+    process.exit(0);
+  }
+
+  const stat = fs.statSync(absTarget);
+  let count = 0;
+  if (stat.isDirectory()) {
+    const files = fs.readdirSync(absTarget);
+    for (const file of files) {
+      const fullPath = path.join(absTarget, file);
+      if (fs.statSync(fullPath).isFile()) {
+        fs.unlinkSync(fullPath);
+        count++;
+      }
+    }
+    console.log(`✅ 成功清空目录 ${targetArg} 下的 ${count} 个文件。`);
+  } else {
+    fs.unlinkSync(absTarget);
+    console.log(`✅ 成功删除文件 ${targetArg}。`);
+  }
+  process.exit(0);
+}
+
+// ── 编译命令 ──────────────────────────────────────────────────────────────────
 const promptFilePath = arg;
 const absPromptPath = path.resolve(process.cwd(), promptFilePath);
 

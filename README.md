@@ -66,6 +66,10 @@ compile-prompt prompts/current.md | claude
 
 # 保存为临时文件
 compile-prompt prompts/current.md > /tmp/compiled.md
+
+# [新增功能] 一键清理：清空某个文件夹下的所有文件，或删除单个文件
+compile-prompt --clear prompts
+compile-prompt --clear prompts/current.md
 ```
 
 展开后输出：
@@ -122,20 +126,20 @@ pnpm run unlink:cli
 如果你在终端使用自主运作的 AI 工具（例如原生的 `claude` CLI），你可以在项目根目录下创建/修改 `CLAUDE.md`，教会它们自动读取最新版本的提示词上下文，做到真正的“永不过期”：
 
 ```markdown
-# AI Snippet Collector 工作流指南
+# 必读：AI 上下文解析指令
 
-项目中使用了自定义的代码片段聚合工具，含有代码片段的文件通常保存在 \`prompts/\` 目录下。
+本项目使用 `ai-snippet-collector` 聚合代码片段指针，这些文件均位于 `prompts/` 目录下。
 
-## 如何读取关联的代码文件
+⚠️ **警告：包含代码指针的文件不含真实的最新代码！** ⚠️
 
-如果你在这些文件中看到类似 \`--- \\n **File:** path/to/file (Lines: X-Y)\` 这样的引用，它代表了一个代码段指针。
-这个时候，**请你不要直接读取**原 Markdown 文件，而是**必须**通过以下命令编译后读取带有最新代码的文件流：
-\`\`\`bash
-compile-prompt prompts/<问题文件>.md
-\`\`\`
-_(注意：该命令会在你的 stdout 中返回展开后的最新代码)_
+如果在本次任务中，你需要读取 `prompts/` 目录下的任何文件，**你绝对不能直接读取其原始内容**。你**必须**严格遵循以下操作：
 
-请基于该命令展开后的最新真实代码内容，理解上下文并帮我修改代码。
+1. 运行以下终端命令来解析该提示词文件：
+   \`\`\`bash
+   compile-prompt <该提示词文件的相对路径>
+   \`\`\`
+2. 该命令会将文件中所有的伪指针（例如 `**File:** xxx`）实时替换为硬盘上的最新代码，并将完整内容输出到标准输出 (stdout)。
+3. **你必须只根据该命令的输出结果**来理解当前上下文，并为我提供解答或修改代码。
 ```
 
 ## 配置项
