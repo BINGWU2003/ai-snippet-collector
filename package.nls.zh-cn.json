@@ -1,0 +1,9 @@
+{
+  "command.addToSpecificFile.title": "AI Snippet: 添加到指定提示词文件…",
+  "command.addToLastFile.title": "AI Snippet: 添加到上次使用的提示词文件",
+  "configuration.title": "AI Snippet Collector",
+  "configuration.language.enum.auto": "跟随 VS Code 界面语言自动选择",
+  "configuration.language.enum.en": "English",
+  "configuration.language.enum.zhCn": "简体中文",
+  "configuration.language.description": "AI Snippet Collector 的界面语言。'auto' 跟随 VS Code 界面语言自动切换。"
+}

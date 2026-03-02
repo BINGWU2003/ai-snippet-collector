@@ -1,0 +1,86 @@
+{
+  "name": "ai-snippet-collector",
+  "displayName": "ai-snippet-collector",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ai-snippet.addToSpecificFile",
+        "title": "%command.addToSpecificFile.title%"
+      },
+      {
+        "command": "ai-snippet.addToLastFile",
+        "title": "%command.addToLastFile.title%"
+      }
+    ],
+    "configuration": {
+      "title": "%configuration.title%",
+      "properties": {
+        "aiSnippetCollector.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "zh-cn"
+          ],
+          "enumDescriptions": [
+            "%configuration.language.enum.auto%",
+            "%configuration.language.enum.en%",
+            "%configuration.language.enum.zhCn%"
+          ],
+          "default": "auto",
+          "description": "%configuration.language.description%"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "ai-snippet.addToLastFile",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "ai-snippet.addToSpecificFile",
+          "group": "1_modification@2"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "vsix": "pnpm run package && vsce package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.3",
+    "eslint": "^9.39.3",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1"
+  }
+}
