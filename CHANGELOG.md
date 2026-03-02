@@ -8,51 +8,52 @@
 
 ## [0.1.0] — 2026-03-02
 
-### 新增
+🎉 **核心工作流升级：从“代码拷贝”到“轻量引用指针”！**
 
-- **代码引用模式** — 采集时只保存文件路径和行号（`**File:** \`path\` (Lines: X-Y)`），不再内嵌代码内容，提示词文件体积极小且始终指向最新代码。
-- **CodeLens 操作按钮** — 打开 `prompts/` 下的 `.md` / `.txt` 文件时，每个引用顶部自动显示三个操作按钮：
-  - `$(trash) 删除此片段` — 一键删除整个引用片段（含前置空行），无需手动选中。
-  - `$(go-to-file) 跳转到源码` — 打开源文件并定位到采集时的起始行。
-  - `$(expand-all) 展开代码` / `$(collapse-all) 折叠代码` — 展开为当前磁盘最新代码预览，或折叠回轻量引用；两个按钮互斥，避免重复展开。
-- **快捷键** — 新增键盘快捷键，无需右键菜单：
-  - `Ctrl+Alt+A` / `Cmd+Alt+A` — 添加到上次使用的文件
-  - `Ctrl+Alt+Shift+A` / `Cmd+Alt+Shift+A` — 添加到指定文件
-- **`compile-prompt` 全局 CLI** — 通过 `pnpm run link:cli` 安装后全局可用；实时读取磁盘展开所有引用，支持管道传递给任意 AI CLI：
-  ```bash
-  compile-prompt prompts/current.md | clip    # 复制到剪贴板
-  compile-prompt prompts/current.md | claude  # 直接发给 Claude CLI
-  ```
-  - 支持 `--help` / `-h` 查看用法
-  - 已展开的片段：自动用最新代码替换旧代码块，不重复输出
-  - 文件不存在时保留引用并输出警告，不中断
-- **CLI 打包** — `esbuild.cli.js` 用 esbuild 将 `scripts/compile-prompt.ts` 打包为独立 Node.js 可执行文件（`dist/cli/compile-prompt.js`），无需 tsx 运行时。
+### 新增核心工作流
 
-### 修复
+- **代码引用模式 (Reference Pointers)**
+  - 采集时只保存文件路径和行号（例如：`**File:** \`src/index.ts\` (Lines: 1-10)`），不再内嵌长篇代码。
+  - 优势：提示词文件体积极小，且每次发送给 AI 前都能自动拉取**最新的源代码**，不再受“代码过期”困扰。
 
-- **CodeLens 不显示问题** — `activationEvents` 从 `[]` 改为 `["onLanguage:markdown"]`，确保打开 Markdown 文件时扩展及时激活。
-- **Windows CRLF 兼容** — 行尾 `\r` 导致围栏匹配失败，改用 `trimEnd()` 统一处理。
+- **`compile-prompt` 全局 CLI**
+  - 新增命令行工具，用于将提示词文件中的代码引用实时展开为最新的真实代码。
+  - 支持通过管道 `|` 传递给剪贴板 (`clip` / `pbcopy`) 或 AI CLI 工具（如 `claude` 参数）。
+  - **智能展开**：如果引用已被展开（带代码块），命令会用最新代码替换旧代码块，避免内容重复。
+  - **一键清理 (`--clear` / `-c`)**：支持快速清空 `prompts/` 目录下的所有文件，或删除指定文件。
+  - 安装方式：在项目下运行 `pnpm run link:cli`。
 
-### 其他
+- **AI Agent 自动支持 (`CLAUDE.md`)**
+  - README 中新增了对 Claude Code、Aider 等自主运行 AI 工具的配置教程，让 AI 自动调用 CLI 获取最新上下文。
 
-- 插件图标、作者、仓库、许可证（MIT）信息完善至 `package.json`。
-- 新增 `LICENSE` 文件（MIT）。
-- 工作区 `.vscode/settings.json` 加入 `[markdown].editor.formatOnSave: false`，防止格式化器破坏引用格式。
+### 编辑器体验增强
+
+- **CodeLens 智能管理面板**
+  - 打开 `prompts/` 目录下的 Markdown 文件时，每个代码引用顶部会自动显示操作面板：
+  - `$(expand-all) 展开代码` / `$(collapse-all) 折叠代码`：一键预览当前最新代码，或折叠为单行指针。
+  - `$(go-to-file) 跳转到源码`：一击定位到采集该指针时的具体文件和行数。
+  - `$(trash) 删除此片段`：智能删除当前引用（包含其附带的代码块）。
+- **新增系统级快捷键**
+  - `Ctrl+Alt+A` / `Cmd+Alt+A`：快速追加当前选中代码到上一次交互的提示词文件。
+  - `Ctrl+Alt+Shift+A` / `Cmd+Alt+Shift+A`：追加到指定的（或新的）提示词文件。
+
+### 修复与优化
+
+- **修复**：`activationEvents` 支持 Markdown 文件打开即时激活，解决了 CodeLens 偶尔不显示的问题。
+- **修复**：对 Windows 系统的 `\r\n` (CRLF) 换行符提供完美兼容，防止文件解析失败出 Bug。
+- **优化**：CLI 使用 esbuild 自动打包成不依赖项目的独立 Node.js 可执行文件。
+- **优化**：推荐禁用 `prompts/` 文件夹下 Markdown 的 `formatOnSave`，并在 README 增加配置说明。
 
 ---
 
 ## [0.0.1] — 2026-03-02
 
-### 新增
+**插件首次发布，建立基础片段收集功能**
 
-- **核心片段保存功能** — 将选中代码追加到 `prompts/` 目录下的任意 `.md` / `.txt` 文件。
-- **两个命令**：
-  - `ai-snippet.addToSpecificFile` — 通过 QuickPick 选择或新建目标提示词文件。
-  - `ai-snippet.addToLastFile` — 一键追加到上次使用的文件；首次使用时自动降级为文件选择流程。
-- **智能 QuickPick** — 支持直接在选择框输入文件名创建新文件，无需额外弹窗；列表实时过滤。
-- **状态栏快捷入口** — 右下角显示当前目标文件，点击触发 `addToLastFile`。
-- **保存后一键打开** — 保存成功提示中附带「打开文件」按钮，直接跳转查看。
-- **未选中文字兜底** — 无选中内容时提示用户是否使用当前行，而非直接报错退出。
-- **多语言界面支持** — 支持英文和简体中文，通过 `aiSnippetCollector.language`（`auto` / `en` / `zh-cn`）配置；右键菜单通过 NLS 文件跟随 VS Code 界面语言自动切换。
-- **异步文件 I/O** — 所有文件操作使用 `fs.promises`，避免阻塞 UI 线程。
-- **模块化代码结构** — 逻辑拆分为 `constants`、`i18n`、`statusBar`、`formatter`、`fileManager`、`snippetContext` 等独立模块。
+### 新增
+- **核心功能**：将选中代码追加到 `prompts/` 目录下的任意 `.md` / `.txt` 文件。
+- **快速命令**：`ai-snippet.addToSpecificFile` 和 `ai-snippet.addToLastFile`。
+- **智能 QuickPick**：支持在选择列表里直接输入文件名新建提示词文件。
+- **状态栏快捷入口**：右下角常驻显示当前正在收集的目标提示词文件。
+- **多语言界面**：支持英文和简体中文，跟随 VS Code 环境自适应（或通过 `aiSnippetCollector.language` 强制配置）。
+- **架构**：全异步文件读写操作，防止阻塞 UI，并按模块 (`fileManager`, `snippetContext` 等) 标准化代码。
