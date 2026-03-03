@@ -13,18 +13,3 @@ export function formatAsReference(
   const anchorPart = anchor ? ` <!-- anchor: "${anchor}" -->` : "";
   return `\n\n---\n**File:** \`${filePath}\` (Lines: ${startLine}-${endLine})${anchorPart}\n`;
 }
-
-/**
- * 格式化为内嵌代码块（保留，供「展开代码」命令写入使用）。
- */
-export function formatCodeBlock(
-  filePath: string,
-  startLine: number,
-  endLine: number,
-  code: string,
-  language: string,
-  anchor?: string,
-): string {
-  const anchorPart = anchor ? ` <!-- anchor: "${anchor}" -->` : "";
-  return `\n\n---\n**File:** \`${filePath}\` (Lines: ${startLine}-${endLine})${anchorPart}\n\`\`\`${language}\n${code}\n\`\`\`\n`;
-}

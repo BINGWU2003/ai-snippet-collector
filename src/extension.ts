@@ -5,7 +5,6 @@ import { saveSnippet, listPromptFiles } from "./fileManager";
 import { getSnippetContext } from "./snippetContext";
 import { SnippetCodeLensProvider } from "./snippetCodeLens";
 import { t } from "./i18n";
-import { formatCodeBlock } from "./formatter";
 import { resolveAnchor } from "./anchorResolver";
 
 export function activate(context: vscode.ExtensionContext) {
