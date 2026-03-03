@@ -1,12 +1,12 @@
 # AI Snippet Collector
 
-**AI Snippet Collector** 是一款为 AI 辅助研发工作流设计的 VS Code 扩展。它在提示词文件中保存**代码引用指针**（路径 + 行号），配合 `compile-prompt` CLI 在发给 AI 之前实时拉取最新代码——代码重构了、函数改了，上下文永远是最新的。
+**AI Snippet Collector** 是一款为 AI 辅助研发工作流设计的 VS Code 扩展。它在提示词文件中保存**代码引用指针**（路径 + 行号 + 锚点），配合 `compile-prompt` CLI 在发给 AI 之前实时拉取最新代码——代码重构了、函数改了、行号漂移了，上下文永远是最新的。
 
 ## 核心理念
 
 ```
-收集时 → 只存路径 + 行号（轻量，无冗余）
-发送前 → compile-prompt 读取磁盘，注入当前最新代码
+收集时 → 只存路径 + 行号 + 首行锚点（轻量，无冗余）
+发送前 → compile-prompt 通过锚点定位，注入当前最新代码
 ```
 
 ## 功能特性
@@ -16,8 +16,9 @@
 | 📎 **添加到指定文件**  | 选中代码后保存引用到 `prompts/`，支持新建文件                  |
 | ⚡ **添加到上次文件**  | 一键追加，无历史时自动降级为文件选择                           |
 | 🗑️ **一键删除片段**    | CodeLens 删除按钮，无需手动选中                                |
-| 🔗 **跳转到源码**      | CodeLens 直接定位到采集时的原始行                              |
+| 🔗 **跳转到源码**      | CodeLens 直接定位到采集时的原始行，行号漂移时自动修正          |
 | 🔍 **展开 / 折叠代码** | 随时展开为当前最新代码预览，或折叠回轻量引用                   |
+| 📌 **锚点追踪**        | 保存时记录首行内容，代码被移动或行号偏移后仍能精准定位         |
 | 🌐 **多语言界面**      | 支持英文和简体中文，可独立配置                                 |
 | 🖥️ **全局 CLI**        | `compile-prompt` 命令一键展开所有引用，可管道传递给任意 AI CLI |
 
@@ -32,23 +33,25 @@
 | 添加到上次使用的文件 | `Ctrl+Alt+A`       | `Cmd+Alt+A`       |
 | 添加到指定文件       | `Ctrl+Alt+Shift+A` | `Cmd+Alt+Shift+A` |
 
-提示词文件写入一行轻量引用：
+提示词文件写入一行轻量引用（含锚点）：
 
 ```markdown
 ---
 
-**File:** `src/views/admin/index.vue` (Lines: 12-45)
+**File:** `src/views/admin/index.vue` (Lines: 12-45) <!-- anchor: "<template>" -->
 ```
+
+> 锚点（`anchor`）记录选中代码的首行内容，当源文件新增或删除代码导致行号偏移时，系统会自动重新定位，跳转和展开始终指向正确的代码。
 
 多个引用 + 你的问题：
 
 ```markdown
 ---
-**File:** `src/views/admin/index.vue` (Lines: 12-45)
+**File:** `src/views/admin/index.vue` (Lines: 12-45) <!-- anchor: "<template>" -->
 
 ---
 
-**File:** `src/components/Table.vue` (Lines: 100-120)
+**File:** `src/components/Table.vue` (Lines: 100-120) <!-- anchor: "const emit = defineEmits" -->
 
 帮我看看为什么子组件没触发 emit？
 ```
@@ -77,12 +80,14 @@ compile-prompt --clear prompts/current.md
 ````markdown
 ---
 
-**File:** `src/views/admin/index.vue` (Lines: 12-45)
+**File:** `src/views/admin/index.vue` (Lines: 12-45) <!-- anchor: "<template>" -->
 
 ```vue
 <!-- 当前磁盘上的最新代码 -->
 ```
 ````
+
+> 若行号已因代码改动而偏移，`compile-prompt` 会通过锚点自动修正行号后再读取代码。
 
 ### 第三步：管理提示词文件（CodeLens）
 
@@ -196,6 +201,7 @@ src/
 ├── i18n.ts                # 多语言（en / zh-cn）
 ├── statusBar.ts           # 状态栏
 ├── formatter.ts           # 引用格式化
+├── anchorResolver.ts      # 锚点解析（行号漂移修正）
 ├── fileManager.ts         # 文件读写
 ├── snippetContext.ts      # 编辑器选区解析
 └── snippetCodeLens.ts     # CodeLens（删除/跳转/展开/折叠）
