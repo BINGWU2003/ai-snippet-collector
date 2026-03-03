@@ -6,6 +6,7 @@ import { getSnippetContext } from "./snippetContext";
 import { SnippetCodeLensProvider } from "./snippetCodeLens";
 import { t } from "./i18n";
 import { formatCodeBlock } from "./formatter";
+import { resolveAnchor } from "./anchorResolver";
 
 export function activate(context: vscode.ExtensionContext) {
   // 初始化状态栏
@@ -50,8 +51,13 @@ export function activate(context: vscode.ExtensionContext) {
   // ── 命令：跳转到源文件指定行 ──────────────────────────────────
   const disposableGoto = vscode.commands.registerCommand(
     "ai-snippet.gotoSnippetSource",
-    async (relativePath: string, lineNumber: number) => {
-      // 在所有工作区文件夹中查找匹配的文件
+    async (
+      promptUri: vscode.Uri,
+      refLineNum: number,
+      relativePath: string,
+      lineNumber: number,
+      anchor: string,
+    ) => {
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders) {
         vscode.window.showErrorMessage(t().noWorkspaceFolder);
@@ -78,9 +84,21 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const doc = await vscode.workspace.openTextDocument(targetUri);
+
+      // 用锚点解析实际行号（行号可能因增删代码而漂移）
+      const sourceContent = doc.getText();
+      const endLine = lineNumber; // 暂用单行跳转，endLine 不影响定位
+      const resolved = anchor
+        ? resolveAnchor(sourceContent, lineNumber, endLine, anchor)
+        : { startLine: lineNumber, endLine, updated: false };
+
+      // 若行号已漂移，自动修复 prompt 文件中的引用
+      if (resolved.updated) {
+        await repairRefLine(promptUri, refLineNum, resolved.startLine, resolved.endLine);
+      }
+
       const editor = await vscode.window.showTextDocument(doc);
-      // lineNumber 是 1-indexed，VS Code Position 是 0-indexed
-      const targetLine = Math.max(0, lineNumber - 1);
+      const targetLine = Math.max(0, resolved.startLine - 1);
       const position = new vscode.Position(targetLine, 0);
       editor.selection = new vscode.Selection(position, position);
       editor.revealRange(
@@ -97,10 +115,11 @@ export function activate(context: vscode.ExtensionContext) {
     "ai-snippet.expandReference",
     async (
       docUri: vscode.Uri,
-      sepLineNum: number,
+      refLineNum: number,
       relativePath: string,
       startLine: number,
       endLine: number,
+      anchor: string,
     ) => {
       // 查找源文件
       const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -126,10 +145,18 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      // 读取源文件当前指定行的代码
+      // 读取源文件，用锚点解析实际行号
       const sourceDoc = await vscode.workspace.openTextDocument(sourceUri);
-      const startIdx = Math.max(0, startLine - 1);
-      const endIdx = Math.min(sourceDoc.lineCount - 1, endLine - 1);
+      const sourceContent = sourceDoc.getText();
+      const resolved = anchor
+        ? resolveAnchor(sourceContent, startLine, endLine, anchor)
+        : { startLine, endLine, updated: false };
+
+      const resolvedStart = resolved.startLine;
+      const resolvedEnd = resolved.endLine;
+
+      const startIdx = Math.max(0, resolvedStart - 1);
+      const endIdx = Math.min(sourceDoc.lineCount - 1, resolvedEnd - 1);
       const lines: string[] = [];
       for (let ln = startIdx; ln <= endIdx; ln++) {
         lines.push(sourceDoc.lineAt(ln).text);
@@ -140,13 +167,22 @@ export function activate(context: vscode.ExtensionContext) {
       // 构造内嵌代码块
       const codeBlock = `\`\`\`${language}\n${code}\n\`\`\``;
 
-      // 在 prompts 文件中，将引用行（**File:**）后插入代码块
+      // 在 prompts 文件中插入代码块，并视情况修复行号
       const promptDoc = await vscode.workspace.openTextDocument(docUri);
       const editor = await vscode.window.showTextDocument(promptDoc);
-      const refLine = sepLineNum + 1; // **File:** 所在行
-      const insertPos = new vscode.Position(refLine + 1, 0);
+      const insertPos = new vscode.Position(refLineNum + 1, 0);
       await editor.edit((eb) => {
         eb.insert(insertPos, codeBlock + "\n");
+        // 若行号已漂移，同步修复引用行
+        if (resolved.updated) {
+          const refLineText = promptDoc.lineAt(refLineNum).text;
+          const updatedRefLine = refLineText.replace(
+            /\(Lines: \d+-\d+\)/,
+            `(Lines: ${resolvedStart}-${resolvedEnd})`,
+          );
+          const refRange = promptDoc.lineAt(refLineNum).range;
+          eb.replace(refRange, updatedRefLine);
+        }
       });
     },
   );
@@ -277,3 +313,26 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {}
+
+/**
+ * 修复 prompt 文件中引用行的行号。
+ * refLineNum 是 **File:** 所在的行（0-indexed）。
+ */
+async function repairRefLine(
+  promptUri: vscode.Uri,
+  refLineNum: number,
+  newStart: number,
+  newEnd: number,
+): Promise<void> {
+  const doc = await vscode.workspace.openTextDocument(promptUri);
+  const editor = await vscode.window.showTextDocument(doc);
+  const refLineText = doc.lineAt(refLineNum).text;
+  const updatedRefLine = refLineText.replace(
+    /\(Lines: \d+-\d+\)/,
+    `(Lines: ${newStart}-${newEnd})`,
+  );
+  const refRange = doc.lineAt(refLineNum).range;
+  await editor.edit((eb) => {
+    eb.replace(refRange, updatedRefLine);
+  });
+}

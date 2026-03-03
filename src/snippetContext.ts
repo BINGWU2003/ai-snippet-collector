@@ -50,8 +50,11 @@ export async function getSnippetContext(): Promise<SnippetContext | null> {
   const startLine = selection.start.line + 1;
   const endLine = selection.end.line + 1;
 
+  // 提取首行作为锚点，用于行号漂移时重新定位
+  const anchor = code.split("\n")[0].trim();
+
   // 仅保存引用，不内嵌代码
-  const textToAppend = formatAsReference(relativeFilePath, startLine, endLine);
+  const textToAppend = formatAsReference(relativeFilePath, startLine, endLine, anchor);
 
   return { textToAppend, workspaceFolder };
 }

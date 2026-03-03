@@ -1,15 +1,10 @@
-import * as assert from 'assert';
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
+/**
+ * VSCode 集成测试入口。
+ * 需要 VSCode Extension Host 环境，适合测试依赖 vscode API 的命令行为。
+ * 纯逻辑测试见 anchorResolver.test.ts / formatter.test.ts。
+ */
 import * as vscode from 'vscode';
-// import * as myExtension from '../../extension';
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
-
-	test('Sample test', () => {
-		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
-		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
-	});
+suite('Extension Integration', () => {
+  vscode.window.showInformationMessage('Start integration tests.');
 });

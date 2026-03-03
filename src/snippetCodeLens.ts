@@ -7,6 +7,8 @@ interface SnippetLocation {
   sourceRelativePath: string;
   sourceStartLine: number;
   sourceEndLine: number;
+  /** 锚点：保存时选中代码的首行内容，用于行号漂移时重新定位 */
+  anchor: string;
   /** 已展开（引用行后紧跟代码块）*/
   isExpanded: boolean;
   /** 仅展开时有值：代码块的范围（用于折叠命令）*/
@@ -17,11 +19,11 @@ interface SnippetLocation {
  * 逐行扫描文档，识别所有代码引用片段。
  * 格式 A（仅引用）：
  *   ---
- *   **File:** `path` (Lines: X-Y)
+ *   **File:** `path` (Lines: X-Y) <!-- anchor: "first line" -->
  *
  * 格式 B（已展开）：
  *   ---
- *   **File:** `path` (Lines: X-Y)
+ *   **File:** `path` (Lines: X-Y) <!-- anchor: "first line" -->
  *   ```lang
  *   ...code...
  *   ```
@@ -48,10 +50,13 @@ function findSnippets(document: vscode.TextDocument): SnippetLocation[] {
     const refLineNum = i + 1;
     const refLine = lines[refLineNum];
 
-    const locMatch = refLine.match(/`([^`]+)` \(Lines: (\d+)-(\d+)\)/);
+    const locMatch = refLine.match(
+      /`([^`]+)` \(Lines: (\d+)-(\d+)\)(?:\s*<!--\s*anchor:\s*"([^"]*?)"\s*-->)?/,
+    );
     const sourceRelativePath = locMatch?.[1] ?? "";
     const sourceStartLine = locMatch ? parseInt(locMatch[2], 10) : 1;
     const sourceEndLine = locMatch ? parseInt(locMatch[3], 10) : 1;
+    const anchor = locMatch?.[4] ?? "";
 
     // 删除起点（含前置空行）
     let startLineNum = sepLineNum;
@@ -99,6 +104,7 @@ function findSnippets(document: vscode.TextDocument): SnippetLocation[] {
         sourceRelativePath,
         sourceStartLine,
         sourceEndLine,
+        anchor,
         isExpanded: true,
         // 代码块范围：从开栅栏行首到关闭栅栏行末（含换行）
         codeBlockRange: new vscode.Range(
@@ -131,6 +137,7 @@ function findSnippets(document: vscode.TextDocument): SnippetLocation[] {
         sourceRelativePath,
         sourceStartLine,
         sourceEndLine,
+        anchor,
         isExpanded: false,
       });
 
@@ -162,10 +169,12 @@ export class SnippetCodeLensProvider implements vscode.CodeLensProvider {
         sourceRelativePath,
         sourceStartLine,
         sourceEndLine,
+        anchor,
         isExpanded,
         codeBlockRange,
       } = snippet;
       const lineRange = new vscode.Range(codeLensLine, 0, codeLensLine, 3);
+      const refLineNum = codeLensLine + 1; // **File:** 所在行
       const lenses: vscode.CodeLens[] = [];
 
       // 删除整个片段（已展开时也一并删除代码块）
@@ -177,13 +186,19 @@ export class SnippetCodeLensProvider implements vscode.CodeLensProvider {
         }),
       );
 
-      // 跳转到源码
+      // 跳转到源码（传入 docUri + refLineNum 以支持自动修复行号）
       if (sourceRelativePath) {
         lenses.push(
           new vscode.CodeLens(lineRange, {
             title: t().gotoSource,
             command: "ai-snippet.gotoSnippetSource",
-            arguments: [sourceRelativePath, sourceStartLine],
+            arguments: [
+              document.uri,
+              refLineNum,
+              sourceRelativePath,
+              sourceStartLine,
+              anchor,
+            ],
           }),
         );
       }
@@ -204,10 +219,11 @@ export class SnippetCodeLensProvider implements vscode.CodeLensProvider {
             command: "ai-snippet.expandReference",
             arguments: [
               document.uri,
-              codeLensLine,
+              refLineNum,
               sourceRelativePath,
               sourceStartLine,
               sourceEndLine,
+              anchor,
             ],
           }),
         );

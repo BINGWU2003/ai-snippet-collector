@@ -4,6 +4,8 @@
  * 将 prompts 文件中的代码引用（**File:** `path` (Lines: X-Y)）
  * 实时替换为磁盘上当前最新的代码内容，然后输出到 stdout。
  *
+ * 若引用含锚点注释（<!-- anchor: "..." -->），会在行号漂移时自动修正。
+ *
  * 用法：
  *   compile-prompt prompts/my-prompt.md
  *   compile-prompt prompts/my-prompt.md | claude
@@ -34,6 +36,7 @@ if (!arg || arg === "--help" || arg === "-h") {
 说明：
   如果传入文件路径，会将 prompts 文件中的 **File:** 代码引用实时展开为当前磁盘上的最新代码。
   如果引用已经展开（含代码块），将用最新代码替换旧代码块。
+  如果引用含锚点（<!-- anchor: "..." -->），行号漂移时会自动修正后再读取代码。
 `.trim(),
   );
   process.exit(arg ? 0 : 1);
@@ -74,6 +77,35 @@ if (arg === "--clear" || arg === "-c") {
   process.exit(0);
 }
 
+// ── 锚点解析（与 src/anchorResolver.ts 逻辑一致）──────────────────────────────
+function resolveAnchor(
+  sourceContent: string,
+  startLine: number,
+  endLine: number,
+  anchor: string,
+): { startLine: number; endLine: number } {
+  const lines = sourceContent.split("\n");
+  const count = endLine - startLine + 1;
+  const trimmedAnchor = anchor.trim();
+
+  if (!trimmedAnchor) {
+    return { startLine, endLine };
+  }
+
+  const storedIdx = startLine - 1;
+  if (storedIdx < lines.length && lines[storedIdx].trim() === trimmedAnchor) {
+    return { startLine, endLine };
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === trimmedAnchor) {
+      return { startLine: i + 1, endLine: i + count };
+    }
+  }
+
+  return { startLine, endLine };
+}
+
 // ── 编译命令 ──────────────────────────────────────────────────────────────────
 const promptFilePath = arg;
 const absPromptPath = path.resolve(process.cwd(), promptFilePath);
@@ -88,7 +120,8 @@ const content = fs.readFileSync(absPromptPath, "utf8");
 const lines = content.split("\n").map((l) => l.trimEnd());
 
 // ── 逐行解析 ──────────────────────────────────────────────────────────────────
-const refLineRe = /^\*\*File:\*\* `([^`]+)` \(Lines: (\d+)-(\d+)\)$/;
+const refLineRe =
+  /^\*\*File:\*\* `([^`]+)` \(Lines: (\d+)-(\d+)\)(?:\s*<!--\s*anchor:\s*"([^"]*?)"\s*-->)?$/;
 const output: string[] = [];
 
 let i = 0;
@@ -101,9 +134,9 @@ while (i < lines.length) {
     const match = nextLine.match(refLineRe);
 
     if (match) {
-      const [, relPath, startStr, endStr] = match;
-      const startLine = parseInt(startStr, 10);
-      const endLine = parseInt(endStr, 10);
+      const [, relPath, startStr, endStr, anchor] = match;
+      let startLine = parseInt(startStr, 10);
+      let endLine = parseInt(endStr, 10);
       const absSourcePath = path.resolve(process.cwd(), relPath.trim());
 
       // 若引用行后已有代码块，跳过旧代码块（找到关闭围栏）
@@ -125,15 +158,24 @@ while (i < lines.length) {
         continue;
       }
 
+      // 用锚点修正行号
+      const sourceContent = fs.readFileSync(absSourcePath, "utf8");
+      if (anchor) {
+        const resolved = resolveAnchor(sourceContent, startLine, endLine, anchor);
+        startLine = resolved.startLine;
+        endLine = resolved.endLine;
+      }
+
       // 实时读取源文件最新代码
-      const sourceLines = fs.readFileSync(absSourcePath, "utf8").split("\n");
+      const sourceLines = sourceContent.split("\n");
       const startIdx = Math.max(0, startLine - 1);
       const endIdx = Math.min(sourceLines.length, endLine);
       const codeSnippet = sourceLines.slice(startIdx, endIdx).join("\n");
       const ext = path.extname(relPath).replace(".", "") || "text";
 
       output.push("---");
-      output.push(`**File:** \`${relPath}\` (Lines: ${startLine}-${endLine})`);
+      // 输出修正后的行号（锚点注释保留，对 AI 无干扰）
+      output.push(nextLine.replace(/\(Lines: \d+-\d+\)/, `(Lines: ${startLine}-${endLine})`));
       output.push(`\`\`\`${ext}`);
       output.push(codeSnippet);
       output.push("```");
