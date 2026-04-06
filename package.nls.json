@@ -5,6 +5,7 @@
   "command.gotoSnippetSource.title": "AI Snippet: Go to source",
   "command.expandReference.title": "AI Snippet: Expand code reference",
   "command.collapseReference.title": "AI Snippet: Collapse code reference",
+  "command.compileAndCopy.title": "AI Snippet: Compile & Copy to Clipboard",
   "configuration.title": "AI Snippet Collector",
   "configuration.language.enum.auto": "Follow VS Code display language automatically",
   "configuration.language.enum.en": "English",

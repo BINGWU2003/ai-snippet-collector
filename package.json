@@ -52,6 +52,10 @@
       {
         "command": "ai-snippet.collapseReference",
         "title": "%command.collapseReference.title%"
+      },
+      {
+        "command": "ai-snippet.compileAndCopy",
+        "title": "%command.compileAndCopy.title%"
       }
     ],
     "configuration": {
@@ -98,6 +102,11 @@
         "key": "ctrl+alt+shift+a",
         "mac": "cmd+alt+shift+a",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "ai-snippet.compileAndCopy",
+        "key": "ctrl+alt+c",
+        "mac": "cmd+alt+c"
       }
     ]
   },

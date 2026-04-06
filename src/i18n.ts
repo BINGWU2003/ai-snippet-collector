@@ -31,6 +31,14 @@ export interface Messages {
   anchorNotFound: (path: string) => string;
   duplicateSnippet: (path: string, fileName: string) => string;
   addAnyway: string;
+  // note prompt
+  noteInputPrompt: string;
+  noteInputPlaceholder: string;
+  // compile and copy
+  compiledAndCopied: (fileName: string) => string;
+  compiledWithWarnings: (count: number) => string;
+  compileNoFile: string;
+  compileAndCopyTooltip: (fileName: string) => string;
 }
 
 const en: Messages = {
@@ -58,6 +66,12 @@ const en: Messages = {
   anchorNotFound: (p) => `Anchor not found in ${p}, using stored line number (may be inaccurate).`,
   duplicateSnippet: (p, f) => `${p} is already referenced in ${f}. Add anyway?`,
   addAnyway: "Add Anyway",
+  noteInputPrompt: "Add a note for the AI (optional, press Escape to skip)",
+  noteInputPlaceholder: "e.g. Please fix the concurrency bug in this function",
+  compiledAndCopied: (f) => `Compiled and copied to clipboard: ${f}`,
+  compiledWithWarnings: (n) => `Copied to clipboard with ${n} warning(s). Check the Output panel for details.`,
+  compileNoFile: "No prompt file selected. Please save a snippet first.",
+  compileAndCopyTooltip: (f) => `Compile & Copy to clipboard: ${f}`,
 };
 
 const zhCn: Messages = {
@@ -85,6 +99,12 @@ const zhCn: Messages = {
   anchorNotFound: (p) => `在 ${p} 中未找到锚点，将使用存储的行号（可能已过期）。`,
   duplicateSnippet: (p, f) => `${p} 已在 ${f} 中被引用，是否仍要添加？`,
   addAnyway: "仍要添加",
+  noteInputPrompt: "为 AI 添加一条说明（可选，按 Escape 跳过）",
+  noteInputPlaceholder: "例如：请修复这个函数中的并发 bug",
+  compiledAndCopied: (f) => `已编译并复制到剪贴板：${f}`,
+  compiledWithWarnings: (n) => `已复制到剪贴板，但有 ${n} 条警告，请查看输出面板。`,
+  compileNoFile: "尚未选择提示词文件，请先保存一个代码片段。",
+  compileAndCopyTooltip: (f) => `编译并复制到剪贴板：${f}`,
 };
 
 /** 解析最终使用的语言（考虑 auto 模式） */

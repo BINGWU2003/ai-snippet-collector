@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import { LAST_FILE_KEY } from "./constants";
 import { initStatusBar, updateStatusBar } from "./statusBar";
@@ -6,6 +8,7 @@ import { getSnippetContext } from "./snippetContext";
 import { SnippetCodeLensProvider } from "./snippetCodeLens";
 import { t } from "./i18n";
 import { resolveAnchor } from "./anchorResolver";
+import { compilePrompt } from "./compiler";
 
 export function activate(context: vscode.ExtensionContext) {
   // 初始化状态栏
@@ -276,7 +279,14 @@ export function activate(context: vscode.ExtensionContext) {
             targetFile = newFileName;
           }
 
-          await saveSnippet(context, targetFile, textToAppend, workspaceFolder);
+          const note = await vscode.window.showInputBox({
+            prompt: t().noteInputPrompt,
+            placeHolder: t().noteInputPlaceholder,
+          });
+          const finalText = note?.trim()
+            ? textToAppend + `> ${note.trim()}\n`
+            : textToAppend;
+          await saveSnippet(context, targetFile, finalText, workspaceFolder);
         }
       });
 
@@ -303,16 +313,72 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      const note = await vscode.window.showInputBox({
+        prompt: t().noteInputPrompt,
+        placeHolder: t().noteInputPlaceholder,
+      });
+      const finalText = note?.trim()
+        ? snippetCtx.textToAppend + `> ${note.trim()}\n`
+        : snippetCtx.textToAppend;
+
       await saveSnippet(
         context,
         lastUsedFile,
-        snippetCtx.textToAppend,
+        finalText,
         snippetCtx.workspaceFolder,
       );
     },
   );
 
   context.subscriptions.push(disposableSpecific, disposableLast);
+
+  // ── 命令：编译当前 prompt 文件并复制到剪贴板 ──────────────────
+  const disposableCompileAndCopy = vscode.commands.registerCommand(
+    "ai-snippet.compileAndCopy",
+    async () => {
+      const lastFile = context.workspaceState.get<string>(LAST_FILE_KEY);
+      if (!lastFile) {
+        vscode.window.showErrorMessage(t().compileNoFile);
+        return;
+      }
+
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders) {
+        vscode.window.showErrorMessage(t().noWorkspaceFolder);
+        return;
+      }
+
+      let promptFilePath: string | undefined;
+      let basePath: string | undefined;
+      for (const folder of workspaceFolders) {
+        const candidate = path.join(folder.uri.fsPath, "prompts", lastFile);
+        if (fs.existsSync(candidate)) {
+          promptFilePath = candidate;
+          basePath = folder.uri.fsPath;
+          break;
+        }
+      }
+
+      if (!promptFilePath || !basePath) {
+        vscode.window.showErrorMessage(
+          `Prompt file not found: prompts/${lastFile}. The file may have been moved or deleted.`,
+        );
+        return;
+      }
+
+      const content = fs.readFileSync(promptFilePath, "utf8");
+      const { output, warnings } = compilePrompt(content, basePath);
+
+      await vscode.env.clipboard.writeText(output);
+
+      if (warnings.length > 0) {
+        vscode.window.showWarningMessage(t().compiledWithWarnings(warnings.length));
+      } else {
+        vscode.window.showInformationMessage(t().compiledAndCopied(lastFile));
+      }
+    },
+  );
+  context.subscriptions.push(disposableCompileAndCopy);
 }
 
 export function deactivate() {}

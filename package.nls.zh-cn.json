@@ -5,6 +5,7 @@
   "command.gotoSnippetSource.title": "AI Snippet: 跳转到源码",
   "command.expandReference.title": "AI Snippet: 展开代码引用",
   "command.collapseReference.title": "AI Snippet: 折叠代码引用",
+  "command.compileAndCopy.title": "AI Snippet: 编译并复制到剪贴板",
   "configuration.title": "AI Snippet Collector",
   "configuration.language.enum.auto": "跟随 VS Code 界面语言自动选择",
   "configuration.language.enum.en": "English",
