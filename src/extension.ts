@@ -77,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (!targetUri) {
         vscode.window.showErrorMessage(
-          `Source file not found: ${relativePath}`,
+          `Source file not found: ${relativePath}. The file may have been moved or deleted.`,
         );
         return;
       }
@@ -89,7 +89,11 @@ export function activate(context: vscode.ExtensionContext) {
       const endLine = lineNumber; // 暂用单行跳转，endLine 不影响定位
       const resolved = anchor
         ? resolveAnchor(sourceContent, lineNumber, endLine, anchor)
-        : { startLine: lineNumber, endLine, updated: false };
+        : { startLine: lineNumber, endLine, updated: false, found: false, ambiguous: false };
+
+      if (anchor && !resolved.found) {
+        vscode.window.showWarningMessage(t().anchorNotFound(relativePath));
+      }
 
       // 若行号已漂移，自动修复 prompt 文件中的引用
       if (resolved.updated) {
@@ -139,7 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
       if (!sourceUri) {
         vscode.window.showErrorMessage(
-          `Source file not found: ${relativePath}`,
+          `Source file not found: ${relativePath}. The file may have been moved or deleted.`,
         );
         return;
       }

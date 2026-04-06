@@ -3,20 +3,22 @@ import { resolveAnchor } from "../anchorResolver";
 
 suite("anchorResolver", () => {
   suite("锚点与存储行吻合", () => {
-    test("首行完全匹配 → 不更新", () => {
+    test("首行完全匹配 → 不更新，found=true", () => {
       const source = "line1\nfunction foo() {\n  return 1;\n}";
       const r = resolveAnchor(source, 2, 4, "function foo() {");
       assert.strictEqual(r.startLine, 2);
       assert.strictEqual(r.endLine, 4);
       assert.strictEqual(r.updated, false);
+      assert.strictEqual(r.found, true);
     });
 
-    test("首行含前后空格 → trim 后匹配", () => {
+    test("首行含前后空格 → trim 后匹配，found=true", () => {
       const source = "  function foo() {  \n  return 1;\n}";
       const r = resolveAnchor(source, 1, 3, "function foo() {");
       assert.strictEqual(r.startLine, 1);
       assert.strictEqual(r.endLine, 3);
       assert.strictEqual(r.updated, false);
+      assert.strictEqual(r.found, true);
     });
   });
 
@@ -51,36 +53,40 @@ suite("anchorResolver", () => {
   });
 
   suite("锚点找不到时的降级", () => {
-    test("文件中不存在锚点 → 返回原始行号，updated=false", () => {
+    test("文件中不存在锚点 → 返回原始行号，updated=false，found=false", () => {
       const source = "completely different code\nno match here";
       const r = resolveAnchor(source, 5, 8, "function foo() {");
       assert.strictEqual(r.startLine, 5);
       assert.strictEqual(r.endLine, 8);
       assert.strictEqual(r.updated, false);
+      assert.strictEqual(r.found, false);
     });
 
-    test("存储行号越界（行号大于文件行数）→ 全文搜索仍能定位", () => {
+    test("存储行号越界（行号大于文件行数）→ 全文搜索仍能定位，found=true", () => {
       const source = "function foo() {\n  return 1;\n}";
       const r = resolveAnchor(source, 99, 101, "function foo() {");
       assert.strictEqual(r.startLine, 1);
       assert.strictEqual(r.updated, true);
+      assert.strictEqual(r.found, true);
     });
   });
 
   suite("空/无效锚点", () => {
-    test("空字符串锚点 → 直接返回原始行号", () => {
+    test("空字符串锚点 → 直接返回原始行号，found=false", () => {
       const source = "function foo() {\n  return 1;\n}";
       const r = resolveAnchor(source, 1, 3, "");
       assert.strictEqual(r.startLine, 1);
       assert.strictEqual(r.endLine, 3);
       assert.strictEqual(r.updated, false);
+      assert.strictEqual(r.found, false);
     });
 
-    test("纯空格锚点 → 等同于空锚点", () => {
+    test("纯空格锚点 → 等同于空锚点，found=false", () => {
       const source = "function foo() {\n  return 1;\n}";
       const r = resolveAnchor(source, 1, 3, "   ");
       assert.strictEqual(r.startLine, 1);
       assert.strictEqual(r.updated, false);
+      assert.strictEqual(r.found, false);
     });
   });
 

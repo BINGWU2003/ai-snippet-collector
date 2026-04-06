@@ -20,6 +20,31 @@ export async function saveSnippet(
 
   await fs.promises.mkdir(promptsDir, { recursive: true });
 
+  // 去重检测：相同文件路径 + 相同锚点视为重复引用
+  const pathMatch = textToAppend.match(/\*\*File:\*\* `([^`]+)`/);
+  const anchorMatch = textToAppend.match(/<!-- anchor: "([^"]*)" -->/);
+  const newPath = pathMatch?.[1];
+  const newAnchor = anchorMatch?.[1];
+  if (newPath && newAnchor) {
+    try {
+      const existing = await fs.promises.readFile(targetFilePath, "utf8");
+      const isDuplicate =
+        existing.includes(`**File:** \`${newPath}\``) &&
+        existing.includes(`<!-- anchor: "${newAnchor}" -->`);
+      if (isDuplicate) {
+        const action = await vscode.window.showWarningMessage(
+          t().duplicateSnippet(newPath, targetFileName),
+          t().addAnyway,
+        );
+        if (action !== t().addAnyway) {
+          return;
+        }
+      }
+    } catch {
+      // 文件尚不存在，无需去重检测
+    }
+  }
+
   try {
     await fs.promises.appendFile(targetFilePath, textToAppend, "utf8");
 

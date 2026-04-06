@@ -83,18 +83,18 @@ function resolveAnchor(
   startLine: number,
   endLine: number,
   anchor: string,
-): { startLine: number; endLine: number; ambiguous: boolean } {
+): { startLine: number; endLine: number; ambiguous: boolean; found: boolean } {
   const lines = sourceContent.split("\n");
   const count = endLine - startLine + 1;
   const trimmedAnchor = anchor.trim();
 
   if (!trimmedAnchor) {
-    return { startLine, endLine, ambiguous: false };
+    return { startLine, endLine, ambiguous: false, found: false };
   }
 
   const storedIdx = startLine - 1;
   if (storedIdx < lines.length && lines[storedIdx].trim() === trimmedAnchor) {
-    return { startLine, endLine, ambiguous: false };
+    return { startLine, endLine, ambiguous: false, found: true };
   }
 
   // 全文收集所有匹配行，优先选取离存储行号最近的一处
@@ -106,7 +106,7 @@ function resolveAnchor(
   }
 
   if (matches.length === 0) {
-    return { startLine, endLine, ambiguous: false };
+    return { startLine, endLine, ambiguous: false, found: false };
   }
 
   let best = matches[0];
@@ -123,6 +123,7 @@ function resolveAnchor(
     startLine: best,
     endLine: best + count - 1,
     ambiguous: matches.length > 1,
+    found: true,
   };
 }
 
@@ -182,7 +183,11 @@ while (i < lines.length) {
       const sourceContent = fs.readFileSync(absSourcePath, "utf8");
       if (anchor) {
         const resolved = resolveAnchor(sourceContent, startLine, endLine, anchor);
-        if (resolved.ambiguous) {
+        if (!resolved.found) {
+          process.stderr.write(
+            `⚠️ 锚点未找到：${relPath} 中不存在 "${anchor}"，将使用存储的行号 ${startLine}-${endLine}（可能已过期）\n`,
+          );
+        } else if (resolved.ambiguous) {
           process.stderr.write(
             `⚠️ 锚点模糊：${relPath} 中有多处匹配 "${anchor}"，已自动选取最近的一处（Line ${resolved.startLine}）\n`,
           );

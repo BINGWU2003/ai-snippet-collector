@@ -27,6 +27,10 @@ export interface Messages {
   inputBoxPlaceholder: string;
   noLastFile: string;
   addToLastFileTitle: string;
+  // anchor / duplicate
+  anchorNotFound: (path: string) => string;
+  duplicateSnippet: (path: string, fileName: string) => string;
+  addAnyway: string;
 }
 
 const en: Messages = {
@@ -51,6 +55,9 @@ const en: Messages = {
   inputBoxPlaceholder: "feature_x.md",
   noLastFile: "No previous file found. Please select or create one.",
   addToLastFileTitle: "Add snippet to last used prompt file",
+  anchorNotFound: (p) => `Anchor not found in ${p}, using stored line number (may be inaccurate).`,
+  duplicateSnippet: (p, f) => `${p} is already referenced in ${f}. Add anyway?`,
+  addAnyway: "Add Anyway",
 };
 
 const zhCn: Messages = {
@@ -75,6 +82,9 @@ const zhCn: Messages = {
   inputBoxPlaceholder: "feature_x.md",
   noLastFile: "未找到上次使用的文件，请选择或新建一个。",
   addToLastFileTitle: "添加代码片段到上次使用的提示词文件",
+  anchorNotFound: (p) => `在 ${p} 中未找到锚点，将使用存储的行号（可能已过期）。`,
+  duplicateSnippet: (p, f) => `${p} 已在 ${f} 中被引用，是否仍要添加？`,
+  addAnyway: "仍要添加",
 };
 
 /** 解析最终使用的语言（考虑 auto 模式） */

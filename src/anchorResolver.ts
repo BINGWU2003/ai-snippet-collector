@@ -8,6 +8,8 @@ export interface ResolveResult {
   updated: boolean;
   /** true 表示文件中有多处相同锚点，已自动选取最近的一处 */
   ambiguous: boolean;
+  /** true 表示锚点在文件中找到了匹配（存储位置或漂移后），false 表示未找到或锚点为空 */
+  found: boolean;
 }
 
 /**
@@ -29,13 +31,13 @@ export function resolveAnchor(
   const trimmedAnchor = anchor.trim();
 
   if (!trimmedAnchor) {
-    return { startLine, endLine, updated: false, ambiguous: false };
+    return { startLine, endLine, updated: false, ambiguous: false, found: false };
   }
 
   // 先验证存储的行号是否仍然有效
   const storedIdx = startLine - 1;
   if (storedIdx < lines.length && lines[storedIdx].trim() === trimmedAnchor) {
-    return { startLine, endLine, updated: false, ambiguous: false };
+    return { startLine, endLine, updated: false, ambiguous: false, found: true };
   }
 
   // 全文收集所有匹配行
@@ -48,7 +50,7 @@ export function resolveAnchor(
 
   if (matches.length === 0) {
     // 锚点未找到，返回原始行号（可能已过期）
-    return { startLine, endLine, updated: false, ambiguous: false };
+    return { startLine, endLine, updated: false, ambiguous: false, found: false };
   }
 
   // 多重匹配时优先选取离存储行号最近的一处
@@ -67,5 +69,6 @@ export function resolveAnchor(
     endLine: best + count - 1,
     updated: best !== startLine,
     ambiguous: matches.length > 1,
+    found: true,
   };
 }
