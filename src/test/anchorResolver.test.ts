@@ -85,13 +85,50 @@ suite("anchorResolver", () => {
   });
 
   suite("多重匹配", () => {
-    test("多处相同锚点 → 返回最先匹配的行", () => {
+    test("存储行号越界时，多处相同锚点 → 返回距离存储行最近的一处", () => {
+      // source: line1="function foo() {", line4="function foo() {"
+      // 存储行号=99，line1 距离=98，line4 距离=95 → 应选 line4
       const source =
         "function foo() {\n  return 1;\n}\nfunction foo() {\n  return 2;\n}";
       const r = resolveAnchor(source, 99, 101, "function foo() {");
-      // 文件中有两处，应返回第一处（line 1）
+      assert.strictEqual(r.startLine, 4);
+      assert.strictEqual(r.endLine, 6);
+      assert.strictEqual(r.updated, true);
+      assert.strictEqual(r.ambiguous, true);
+    });
+
+    test("存储行号靠近第一处时，选取最近的第一处", () => {
+      const source =
+        "function foo() {\n  return 1;\n}\nfunction foo() {\n  return 2;\n}";
+      // 存储行号=2，line1 距离=1，line4 距离=2 → 应选 line1
+      const r = resolveAnchor(source, 2, 4, "function foo() {");
       assert.strictEqual(r.startLine, 1);
       assert.strictEqual(r.updated, true);
+      assert.strictEqual(r.ambiguous, true);
+    });
+
+    test("唯一匹配时 ambiguous=false", () => {
+      const source = "function foo() {\n  return 1;\n}";
+      const r = resolveAnchor(source, 99, 101, "function foo() {");
+      assert.strictEqual(r.ambiguous, false);
+      assert.strictEqual(r.startLine, 1);
+    });
+
+    test("锚点未找到时 ambiguous=false", () => {
+      const source = "completely different code";
+      const r = resolveAnchor(source, 1, 3, "function foo() {");
+      assert.strictEqual(r.ambiguous, false);
+      assert.strictEqual(r.updated, false);
+    });
+  });
+
+  suite("ambiguous 标志", () => {
+    test("存储行精确匹配时 ambiguous=false，即使有其他相同行", () => {
+      // 存储行 startLine=1 精确匹配，不触发全文搜索 → ambiguous=false
+      const source = "function foo() {\n  return 1;\n}\nfunction foo() {\n  return 2;\n}";
+      const r = resolveAnchor(source, 1, 3, "function foo() {");
+      assert.strictEqual(r.updated, false);
+      assert.strictEqual(r.ambiguous, false);
     });
   });
 });

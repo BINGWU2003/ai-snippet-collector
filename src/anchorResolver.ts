@@ -6,6 +6,8 @@ export interface ResolveResult {
   endLine: number;
   /** true 表示行号已更新（与存储值不同） */
   updated: boolean;
+  /** true 表示文件中有多处相同锚点，已自动选取最近的一处 */
+  ambiguous: boolean;
 }
 
 /**
@@ -27,24 +29,43 @@ export function resolveAnchor(
   const trimmedAnchor = anchor.trim();
 
   if (!trimmedAnchor) {
-    return { startLine, endLine, updated: false };
+    return { startLine, endLine, updated: false, ambiguous: false };
   }
 
   // 先验证存储的行号是否仍然有效
   const storedIdx = startLine - 1;
   if (storedIdx < lines.length && lines[storedIdx].trim() === trimmedAnchor) {
-    return { startLine, endLine, updated: false };
+    return { startLine, endLine, updated: false, ambiguous: false };
   }
 
-  // 全文搜索锚点
+  // 全文收集所有匹配行
+  const matches: number[] = [];
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].trim() === trimmedAnchor) {
-      const newStart = i + 1;
-      const newEnd = newStart + count - 1;
-      return { startLine: newStart, endLine: newEnd, updated: true };
+      matches.push(i + 1); // 1-indexed
     }
   }
 
-  // 锚点未找到，返回原始行号（可能已过期）
-  return { startLine, endLine, updated: false };
+  if (matches.length === 0) {
+    // 锚点未找到，返回原始行号（可能已过期）
+    return { startLine, endLine, updated: false, ambiguous: false };
+  }
+
+  // 多重匹配时优先选取离存储行号最近的一处
+  let best = matches[0];
+  let minDist = Math.abs(matches[0] - startLine);
+  for (const m of matches.slice(1)) {
+    const dist = Math.abs(m - startLine);
+    if (dist < minDist) {
+      minDist = dist;
+      best = m;
+    }
+  }
+
+  return {
+    startLine: best,
+    endLine: best + count - 1,
+    updated: best !== startLine,
+    ambiguous: matches.length > 1,
+  };
 }

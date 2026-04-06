@@ -83,27 +83,47 @@ function resolveAnchor(
   startLine: number,
   endLine: number,
   anchor: string,
-): { startLine: number; endLine: number } {
+): { startLine: number; endLine: number; ambiguous: boolean } {
   const lines = sourceContent.split("\n");
   const count = endLine - startLine + 1;
   const trimmedAnchor = anchor.trim();
 
   if (!trimmedAnchor) {
-    return { startLine, endLine };
+    return { startLine, endLine, ambiguous: false };
   }
 
   const storedIdx = startLine - 1;
   if (storedIdx < lines.length && lines[storedIdx].trim() === trimmedAnchor) {
-    return { startLine, endLine };
+    return { startLine, endLine, ambiguous: false };
   }
 
+  // 全文收集所有匹配行，优先选取离存储行号最近的一处
+  const matches: number[] = [];
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].trim() === trimmedAnchor) {
-      return { startLine: i + 1, endLine: i + count };
+      matches.push(i + 1);
     }
   }
 
-  return { startLine, endLine };
+  if (matches.length === 0) {
+    return { startLine, endLine, ambiguous: false };
+  }
+
+  let best = matches[0];
+  let minDist = Math.abs(matches[0] - startLine);
+  for (const m of matches.slice(1)) {
+    const dist = Math.abs(m - startLine);
+    if (dist < minDist) {
+      minDist = dist;
+      best = m;
+    }
+  }
+
+  return {
+    startLine: best,
+    endLine: best + count - 1,
+    ambiguous: matches.length > 1,
+  };
 }
 
 // ── 编译命令 ──────────────────────────────────────────────────────────────────
@@ -162,12 +182,17 @@ while (i < lines.length) {
       const sourceContent = fs.readFileSync(absSourcePath, "utf8");
       if (anchor) {
         const resolved = resolveAnchor(sourceContent, startLine, endLine, anchor);
+        if (resolved.ambiguous) {
+          process.stderr.write(
+            `⚠️ 锚点模糊：${relPath} 中有多处匹配 "${anchor}"，已自动选取最近的一处（Line ${resolved.startLine}）\n`,
+          );
+        }
         startLine = resolved.startLine;
         endLine = resolved.endLine;
       }
 
-      // 实时读取源文件最新代码
-      const sourceLines = sourceContent.split("\n");
+      // 实时读取源文件最新代码（trimEnd 处理 Windows CRLF）
+      const sourceLines = sourceContent.split("\n").map((l) => l.replace(/\r$/, ""));
       const startIdx = Math.max(0, startLine - 1);
       const endIdx = Math.min(sourceLines.length, endLine);
       const codeSnippet = sourceLines.slice(startIdx, endIdx).join("\n");
