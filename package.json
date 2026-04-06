@@ -2,7 +2,7 @@
   "name": "ai-snippet-collector",
   "displayName": "AI Snippet Collector",
   "description": "Collect and organize code snippets into Markdown prompt files for AI assistants.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "publisher": "BINGWU2003",
   "author": {
